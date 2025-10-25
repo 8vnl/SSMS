@@ -1,0 +1,15 @@
+# Data files - CRITICAL to exclude
+data/
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock

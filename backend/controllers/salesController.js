@@ -73,10 +73,15 @@ const getTodaySales = async (req, res) => {
     const todayStart = getStartOfDay();
     const todayEnd = getEndOfDay();
 
+    console.log('Today range:', { todayStart, todayEnd });
+
     const todaySales = sales.filter(sale => {
       const saleDate = new Date(sale.createdAt);
       return saleDate >= todayStart && saleDate <= todayEnd;
     });
+
+    console.log('Total sales:', sales.length);
+    console.log('Today sales:', todaySales.length);
 
     // Populate menu items
     const populatedSales = todaySales.map(sale => ({
@@ -105,10 +110,24 @@ const getTodaySales = async (req, res) => {
 const getSalesByDateRange = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+    console.log('Date range query:', { startDate, endDate });
+    
     const sales = await storage.getSales();
     const menuItems = await storage.getMenuItems();
     
-    const filteredSales = filterSalesByDateRange(sales, startDate, endDate);
+    let filteredSales = sales;
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      filteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        return saleDate >= start && saleDate <= end;
+      });
+    }
+
+    console.log('Filtered sales count:', filteredSales.length);
 
     // Populate menu items
     const populatedSales = filteredSales.map(sale => ({
@@ -128,12 +147,24 @@ const getSalesByDateRange = async (req, res) => {
 const getDailyAggregates = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+    console.log('Aggregates query:', { startDate, endDate });
+    
     const sales = await storage.getSales();
+    console.log('Total sales in system:', sales.length);
     
     let filteredSales = sales;
     if (startDate && endDate) {
-      filteredSales = filterSalesByDateRange(sales, startDate, endDate);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      filteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        return saleDate >= start && saleDate <= end;
+      });
     }
+
+    console.log('Sales after filtering:', filteredSales.length);
 
     // Group by date
     const aggregates = {};
@@ -157,6 +188,7 @@ const getDailyAggregates = async (req, res) => {
       new Date(b.date) - new Date(a.date)
     );
 
+    console.log('Final aggregates:', result);
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

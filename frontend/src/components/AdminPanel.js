@@ -17,8 +17,10 @@ const AdminPanel = () => {
   const fetchPendingUsers = async () => {
     try {
       const response = await api.get('/users/pending');
+      console.log('Pending users:', response.data);
       setPendingUsers(response.data);
     } catch (error) {
+      console.error('Failed to fetch pending users:', error);
       setError('Failed to fetch pending users');
     }
   };
@@ -26,13 +28,21 @@ const AdminPanel = () => {
   const fetchAllUsers = async () => {
     try {
       const response = await api.get('/users');
+      console.log('All users:', response.data);
       setAllUsers(response.data);
     } catch (error) {
+      console.error('Failed to fetch users:', error);
       setError('Failed to fetch users');
     }
   };
 
   const handleApprove = async (userId) => {
+    console.log('Approving user ID:', userId);
+    if (!userId) {
+      setError('Invalid user ID');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.put(`/users/approve/${userId}`);
@@ -40,13 +50,20 @@ const AdminPanel = () => {
       fetchPendingUsers();
       fetchAllUsers();
     } catch (error) {
-      setError('Failed to approve user');
+      console.error('Approve error:', error);
+      setError('Failed to approve user: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeny = async (userId) => {
+    console.log('Denying user ID:', userId);
+    if (!userId) {
+      setError('Invalid user ID');
+      return;
+    }
+
     if (window.confirm('Are you sure you want to deny this user registration?')) {
       setLoading(true);
       try {
@@ -55,7 +72,8 @@ const AdminPanel = () => {
         fetchPendingUsers();
         fetchAllUsers();
       } catch (error) {
-        setError('Failed to deny user');
+        console.error('Deny error:', error);
+        setError('Failed to deny user: ' + (error.response?.data?.message || error.message));
       } finally {
         setLoading(false);
       }
@@ -76,15 +94,15 @@ const AdminPanel = () => {
     <div className="admin-panel">
       <h2>Admin Panel</h2>
 
-      <div className="tabs" style={{ marginBottom: '2rem' }}>
+      <div className="tabs" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
         <button 
-          className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+          className={`btn ${activeTab === 'pending' ? 'btn-success' : ''}`}
           onClick={() => setActiveTab('pending')}
         >
           Pending Approvals ({pendingUsers.length})
         </button>
         <button 
-          className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+          className={`btn ${activeTab === 'users' ? 'btn-success' : ''}`}
           onClick={() => setActiveTab('users')}
         >
           All Users ({allUsers.length})
@@ -102,6 +120,7 @@ const AdminPanel = () => {
             <table>
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Username</th>
                   <th>Email</th>
                   <th>Registered On</th>
@@ -110,14 +129,15 @@ const AdminPanel = () => {
               </thead>
               <tbody>
                 {pendingUsers.map(user => (
-                  <tr key={user._id}>
+                  <tr key={user.id}>
+                    <td>{user.id}</td>
                     <td>{user.username}</td>
                     <td>{user.email}</td>
                     <td>{formatDate(user.createdAt)}</td>
                     <td>
                       <button 
                         className="btn btn-success"
-                        onClick={() => handleApprove(user._id)}
+                        onClick={() => handleApprove(user.id)}
                         disabled={loading}
                         style={{ marginRight: '0.5rem' }}
                       >
@@ -125,7 +145,7 @@ const AdminPanel = () => {
                       </button>
                       <button 
                         className="btn btn-danger"
-                        onClick={() => handleDeny(user._id)}
+                        onClick={() => handleDeny(user.id)}
                         disabled={loading}
                       >
                         Deny
@@ -144,6 +164,7 @@ const AdminPanel = () => {
           <table>
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Username</th>
                 <th>Email</th>
                 <th>Role</th>
@@ -153,7 +174,8 @@ const AdminPanel = () => {
             </thead>
             <tbody>
               {allUsers.map(user => (
-                <tr key={user._id}>
+                <tr key={user.id}>
+                  <td>{user.id}</td>
                   <td>{user.username}</td>
                   <td>{user.email}</td>
                   <td>

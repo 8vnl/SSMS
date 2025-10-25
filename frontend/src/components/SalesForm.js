@@ -23,7 +23,7 @@ const SalesForm = () => {
 
   useEffect(() => {
     calculateTotalPrice();
-  }, [formData.orderItems, formData.customAdditionalCharges]);
+  }, [formData.orderItems, formData.customAdditionalCharges, menuItems]);
 
   const fetchMenuItems = async () => {
     try {
@@ -38,7 +38,7 @@ const SalesForm = () => {
     let total = parseFloat(formData.customAdditionalCharges) || 0;
 
     formData.orderItems.forEach(item => {
-      const menuItem = menuItems.find(mi => mi._id === item.menuItem);
+      const menuItem = menuItems.find(mi => mi.id === parseInt(item.menuItem));
       if (menuItem) {
         let itemPrice = menuItem.basePrice;
         
@@ -91,7 +91,7 @@ const SalesForm = () => {
   };
 
   const getMenuItemOptions = (menuItemId) => {
-    const menuItem = menuItems.find(item => item._id === menuItemId);
+    const menuItem = menuItems.find(item => item.id === parseInt(menuItemId));
     return menuItem ? menuItem.options : [];
   };
 
@@ -101,8 +101,25 @@ const SalesForm = () => {
     setMessage('');
     setError('');
 
+    // Validate that all menu items are selected
+    const hasEmptyMenuItems = formData.orderItems.some(item => !item.menuItem);
+    if (hasEmptyMenuItems) {
+      setError('Please select a menu item for all order items');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await api.post('/sales', formData);
+      // Convert menuItem values to integers for the backend
+      const submissionData = {
+        ...formData,
+        orderItems: formData.orderItems.map(item => ({
+          ...item,
+          menuItem: parseInt(item.menuItem)
+        }))
+      };
+      
+      await api.post('/sales', submissionData);
       setMessage('Sale recorded successfully!');
       setFormData({
         buyerIdentifier: '',
@@ -160,7 +177,7 @@ const SalesForm = () => {
               >
                 <option value="">Select Menu Item</option>
                 {menuItems.map(menuItem => (
-                  <option key={menuItem._id} value={menuItem._id}>
+                  <option key={menuItem.id} value={menuItem.id}>
                     {menuItem.name} - {formatCurrency(menuItem.basePrice)}
                   </option>
                 ))}

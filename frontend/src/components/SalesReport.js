@@ -13,14 +13,14 @@ const SalesReport = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
-
+    // Set default date range to last 7 days
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    
     setDateRange({
-      startDate: oneWeekAgoStr,
-      endDate: today
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0]
     });
   }, []);
 
@@ -32,12 +32,15 @@ const SalesReport = () => {
 
   const fetchDailyAggregates = async () => {
     setLoading(true);
+    setError('');
     try {
       const response = await api.get('/sales/aggregates', {
         params: dateRange
       });
+      console.log('Daily aggregates:', response.data);
       setDailyAggregates(response.data);
     } catch (error) {
+      console.error('Failed to fetch sales data:', error);
       setError('Failed to fetch sales data');
     } finally {
       setLoading(false);
@@ -52,9 +55,11 @@ const SalesReport = () => {
           endDate: date
         }
       });
+      console.log(`Details for ${date}:`, response.data);
       setDateDetails(response.data);
       setSelectedDate(date);
     } catch (error) {
+      console.error('Failed to fetch date details:', error);
       setError('Failed to fetch date details');
     }
   };
@@ -106,6 +111,15 @@ const SalesReport = () => {
             onChange={handleDateRangeChange}
           />
         </div>
+        
+        <button 
+          type="button" 
+          className="btn"
+          onClick={fetchDailyAggregates}
+          style={{ marginTop: '1rem' }}
+        >
+          Refresh Data
+        </button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -173,13 +187,13 @@ const SalesReport = () => {
                   </thead>
                   <tbody>
                     {dateDetails.map(sale => (
-                      <tr key={sale._id}>
-                        <td>{new Date(sale.createdAt).toLocaleTimeString()}</td>
+                      <tr key={sale.id}>
+                        <td>{new Date(sale.createdAt).toLocaleTimeString('id-ID')}</td>
                         <td>{sale.buyerIdentifier}</td>
                         <td>
                           {sale.orderItems.map((item, index) => (
                             <div key={index}>
-                              {item.quantity}x {item.menuItem.name}
+                              {item.quantity}x {item.menuItem?.name || 'Unknown Item'}
                               {item.selectedOption && ` (${item.selectedOption})`}
                             </div>
                           ))}
@@ -202,6 +216,12 @@ const SalesReport = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {selectedDate && dateDetails.length === 0 && (
+            <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+              <p>No transaction details found for {formatDate(selectedDate)}</p>
             </div>
           )}
         </>

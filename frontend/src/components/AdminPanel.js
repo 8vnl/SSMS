@@ -4,6 +4,7 @@ import api from '../services/api';
 const AdminPanel = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [salesRecords, setSalesRecords] = useState([]);
   const [activeTab, setActiveTab] = useState('pending');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -12,12 +13,14 @@ const AdminPanel = () => {
   useEffect(() => {
     fetchPendingUsers();
     fetchAllUsers();
-  }, []);
+    if (activeTab === 'sales') {
+      fetchSalesRecords();
+    }
+  }, [activeTab]);
 
   const fetchPendingUsers = async () => {
     try {
       const response = await api.get('/users/pending');
-      console.log('Pending users:', response.data);
       setPendingUsers(response.data);
     } catch (error) {
       console.error('Failed to fetch pending users:', error);
@@ -28,7 +31,6 @@ const AdminPanel = () => {
   const fetchAllUsers = async () => {
     try {
       const response = await api.get('/users');
-      console.log('All users:', response.data);
       setAllUsers(response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -36,8 +38,17 @@ const AdminPanel = () => {
     }
   };
 
+  const fetchSalesRecords = async () => {
+    try {
+      const response = await api.get('/sales/history?startDate=2020-01-01&endDate=2030-12-31');
+      setSalesRecords(response.data);
+    } catch (error) {
+      console.error('Failed to fetch sales records:', error);
+      setError('Failed to fetch sales records');
+    }
+  };
+
   const handleApprove = async (userId) => {
-    console.log('Approving user ID:', userId);
     if (!userId) {
       setError('Invalid user ID');
       return;
@@ -58,7 +69,6 @@ const AdminPanel = () => {
   };
 
   const handleDeny = async (userId) => {
-    console.log('Denying user ID:', userId);
     if (!userId) {
       setError('Invalid user ID');
       return;
@@ -80,6 +90,76 @@ const AdminPanel = () => {
     }
   };
 
+  const handleRoleChange = async (userId, newRole) => {
+    if (!userId) {
+      setError('Invalid user ID');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
+      setLoading(true);
+      try {
+        await api.put(`/users/${userId}/role`, { role: newRole });
+        setMessage(`User role updated to ${newRole}`);
+        fetchAllUsers();
+      } catch (error) {
+        console.error('Role change error:', error);
+        setError('Failed to update user role: ' + (error.response?.data?.message || error.message));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!userId) {
+      setError('Invalid user ID');
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      setLoading(true);
+      try {
+        await api.delete(`/users/${userId}`);
+        setMessage('User deleted successfully');
+        fetchAllUsers();
+      } catch (error) {
+        console.error('Delete user error:', error);
+        setError('Failed to delete user: ' + (error.response?.data?.message || error.message));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleDeleteSale = async (saleId) => {
+    if (!saleId) {
+      setError('Invalid sale ID');
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this sale record? This action cannot be undone.')) {
+      setLoading(true);
+      try {
+        await api.delete(`/sales/${saleId}`);
+        setMessage('Sale record deleted successfully');
+        fetchSalesRecords();
+      } catch (error) {
+        console.error('Delete sale error:', error);
+        setError('Failed to delete sale: ' + (error.response?.data?.message || error.message));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR'
+    }).format(amount);
+  };
+
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('id-ID', {
       year: 'numeric',
@@ -90,11 +170,20 @@ const AdminPanel = () => {
     });
   };
 
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin': return '#ef4444';
+      case 'user': return '#3b82f6';
+      case 'viewer': return '#10b981';
+      default: return '#6b7280';
+    }
+  };
+
   return (
     <div className="admin-panel">
       <h2>Admin Panel</h2>
 
-      <div className="tabs" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
+      <div className="tabs" style={{ marginBottom: '2rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <button 
           className={`btn ${activeTab === 'pending' ? 'btn-success' : ''}`}
           onClick={() => setActiveTab('pending')}
@@ -106,6 +195,12 @@ const AdminPanel = () => {
           onClick={() => setActiveTab('users')}
         >
           All Users ({allUsers.length})
+        </button>
+        <button 
+          className={`btn ${activeTab === 'sales' ? 'btn-success' : ''}`}
+          onClick={() => setActiveTab('sales')}
+        >
+          Sales Records
         </button>
       </div>
 
@@ -170,6 +265,7 @@ const AdminPanel = () => {
                 <th>Role</th>
                 <th>Status</th>
                 <th>Registered On</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -179,17 +275,22 @@ const AdminPanel = () => {
                   <td>{user.username}</td>
                   <td>{user.email}</td>
                   <td>
-                    <span 
-                      style={{
+                    <select
+                      value={user.role}
+                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                      style={{ 
                         padding: '0.25rem 0.5rem',
                         borderRadius: '4px',
-                        backgroundColor: user.role === 'admin' ? '#e74c3c' : '#3498db',
+                        border: '1px solid var(--border)',
+                        backgroundColor: getRoleBadgeColor(user.role),
                         color: 'white',
                         fontSize: '0.8rem'
                       }}
                     >
-                      {user.role}
-                    </span>
+                      <option value="admin">Admin</option>
+                      <option value="user">User</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
                   </td>
                   <td>
                     <span 
@@ -205,10 +306,66 @@ const AdminPanel = () => {
                     </span>
                   </td>
                   <td>{formatDate(user.createdAt)}</td>
+                  <td>
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => handleDeleteUser(user.id)}
+                      disabled={loading}
+                      style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {activeTab === 'sales' && (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salesRecords.map(sale => (
+                <tr key={sale.id}>
+                  <td>{sale.id}</td>
+                  <td>{formatDate(sale.createdAt)}</td>
+                  <td>{sale.buyerIdentifier}</td>
+                  <td>
+                    {sale.orderItems.map((item, index) => (
+                      <div key={index} style={{ fontSize: '0.8rem' }}>
+                        {item.quantity}x {item.menuItem?.name || 'Unknown'}
+                        {item.selectedOption && ` (${item.selectedOption})`}
+                      </div>
+                    ))}
+                  </td>
+                  <td className="currency">{formatCurrency(sale.totalPrice)}</td>
+                  <td>
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => handleDeleteSale(sale.id)}
+                      disabled={loading}
+                      style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {salesRecords.length === 0 && <p>No sales records found.</p>}
         </div>
       )}
     </div>

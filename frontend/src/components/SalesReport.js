@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { publicApi } from '../services/api';
 
-const SalesReport = () => {
+const SalesReport = ({ isGuest = false }) => {
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: ''
@@ -18,9 +18,12 @@ const SalesReport = () => {
     const start = new Date();
     start.setDate(start.getDate() - 7);
     
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
     setDateRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
+      startDate: startStr,
+      endDate: endStr
     });
   }, []);
 
@@ -34,14 +37,21 @@ const SalesReport = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/sales/aggregates', {
-        params: dateRange
-      });
-      console.log('Daily aggregates:', response.data);
+      let response;
+      if (isGuest) {
+        response = await publicApi.get('/aggregates', {
+          params: dateRange
+        });
+      } else {
+        const api = await import('../services/api');
+        response = await api.default.get('/sales/aggregates', {
+          params: dateRange
+        });
+      }
       setDailyAggregates(response.data);
     } catch (error) {
       console.error('Failed to fetch sales data:', error);
-      setError('Failed to fetch sales data');
+      setError('Failed to fetch sales data: ' + (error.message || 'Please check your connection'));
     } finally {
       setLoading(false);
     }
@@ -49,18 +59,28 @@ const SalesReport = () => {
 
   const fetchDateDetails = async (date) => {
     try {
-      const response = await api.get('/sales/history', {
-        params: {
-          startDate: date,
-          endDate: date
-        }
-      });
-      console.log(`Details for ${date}:`, response.data);
+      let response;
+      if (isGuest) {
+        response = await publicApi.get('/history', {
+          params: {
+            startDate: date,
+            endDate: date
+          }
+        });
+      } else {
+        const api = await import('../services/api');
+        response = await api.default.get('/sales/history', {
+          params: {
+            startDate: date,
+            endDate: date
+          }
+        });
+      }
       setDateDetails(response.data);
       setSelectedDate(date);
     } catch (error) {
       console.error('Failed to fetch date details:', error);
-      setError('Failed to fetch date details');
+      setError('Failed to fetch date details: ' + (error.message || 'Please check your connection'));
     }
   };
 
@@ -89,7 +109,14 @@ const SalesReport = () => {
 
   return (
     <div className="sales-report">
-      <h2>Past Sales Report</h2>
+      <h2>Sales Reports {isGuest && <span style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>(Guest View)</span>}</h2>
+
+      {isGuest && (
+        <div className="alert alert-info">
+          <p><strong>Read-Only Access</strong></p>
+          <p>You are viewing reports in guest mode. Login for full access to all features.</p>
+        </div>
+      )}
 
       <div className="form-container" style={{ marginBottom: '2rem' }}>
         <div className="form-group">
@@ -128,6 +155,11 @@ const SalesReport = () => {
         <div className="loading">Loading report...</div>
       ) : (
         <>
+          <div style={{ marginBottom: '1rem' }}>
+            <p>Showing data from <strong>{dateRange.startDate}</strong> to <strong>{dateRange.endDate}</strong></p>
+            <p>Found <strong>{dailyAggregates.length}</strong> days with sales data</p>
+          </div>
+
           <div className="table-container">
             <table>
               <thead>
@@ -135,7 +167,6 @@ const SalesReport = () => {
                   <th>Date</th>
                   <th>Total Sales</th>
                   <th>Number of Transactions</th>
-                  <th>Average per Transaction</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -145,12 +176,6 @@ const SalesReport = () => {
                     <td>{formatDate(day.date)}</td>
                     <td>{formatCurrency(day.totalSales)}</td>
                     <td>{day.transactionCount}</td>
-                    <td>
-                      {day.transactionCount > 0 
-                        ? formatCurrency(day.totalSales / day.transactionCount)
-                        : formatCurrency(0)
-                      }
-                    </td>
                     <td>
                       <button 
                         className="btn"

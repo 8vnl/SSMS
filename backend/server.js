@@ -36,7 +36,10 @@ app.use((error, req, res, next) => {
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
-// API routes
+// Public routes (no authentication required)
+app.use('/api/public', require('./routes/public'));
+
+// Protected API routes (authentication required)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/sales', require('./routes/sales'));
 app.use('/api/users', require('./routes/users'));

@@ -1,5 +1,5 @@
 const storage = require('../utils/storage');
-const { generateId, getStartOfDay, getEndOfDay, filterSalesByDateRange } = require('../utils/helpers');
+const { generateId, getStartOfDay, getEndOfDay } = require('../utils/helpers');
 
 const createSale = async (req, res) => {
   try {
@@ -73,15 +73,10 @@ const getTodaySales = async (req, res) => {
     const todayStart = getStartOfDay();
     const todayEnd = getEndOfDay();
 
-    console.log('Today range:', { todayStart, todayEnd });
-
     const todaySales = sales.filter(sale => {
       const saleDate = new Date(sale.createdAt);
       return saleDate >= todayStart && saleDate <= todayEnd;
     });
-
-    console.log('Total sales:', sales.length);
-    console.log('Today sales:', todaySales.length);
 
     // Populate menu items
     const populatedSales = todaySales.map(sale => ({
@@ -110,7 +105,6 @@ const getTodaySales = async (req, res) => {
 const getSalesByDateRange = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    console.log('Date range query:', { startDate, endDate });
     
     const sales = await storage.getSales();
     const menuItems = await storage.getMenuItems();
@@ -118,16 +112,16 @@ const getSalesByDateRange = async (req, res) => {
     let filteredSales = sales;
     if (startDate && endDate) {
       const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0); // Start of day
+      
       const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      end.setHours(23, 59, 59, 999); // End of day
       
       filteredSales = sales.filter(sale => {
         const saleDate = new Date(sale.createdAt);
         return saleDate >= start && saleDate <= end;
       });
     }
-
-    console.log('Filtered sales count:', filteredSales.length);
 
     // Populate menu items
     const populatedSales = filteredSales.map(sale => ({
@@ -140,6 +134,7 @@ const getSalesByDateRange = async (req, res) => {
 
     res.json(populatedSales);
   } catch (error) {
+    console.error('History endpoint error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -147,14 +142,14 @@ const getSalesByDateRange = async (req, res) => {
 const getDailyAggregates = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    console.log('Aggregates query:', { startDate, endDate });
     
     const sales = await storage.getSales();
-    console.log('Total sales in system:', sales.length);
     
     let filteredSales = sales;
     if (startDate && endDate) {
       const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       
@@ -163,8 +158,6 @@ const getDailyAggregates = async (req, res) => {
         return saleDate >= start && saleDate <= end;
       });
     }
-
-    console.log('Sales after filtering:', filteredSales.length);
 
     // Group by date
     const aggregates = {};
@@ -188,8 +181,31 @@ const getDailyAggregates = async (req, res) => {
       new Date(b.date) - new Date(a.date)
     );
 
-    console.log('Final aggregates:', result);
     res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const deleteSale = async (req, res) => {
+  try {
+    const { saleId } = req.params;
+    const sales = await storage.getSales();
+    
+    const saleIndex = sales.findIndex(sale => sale.id === parseInt(saleId));
+    if (saleIndex === -1) {
+      return res.status(404).json({ message: 'Sale record not found' });
+    }
+
+    // Only allow deletion if user is admin or the creator of the sale
+    if (req.user.role !== 'admin' && sales[saleIndex].createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied. Only admins or the creator can delete sales.' });
+    }
+
+    sales.splice(saleIndex, 1);
+    await storage.saveSales(sales);
+
+    res.json({ message: 'Sale record deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -199,5 +215,6 @@ module.exports = {
   createSale, 
   getTodaySales, 
   getSalesByDateRange, 
-  getDailyAggregates 
+  getDailyAggregates,
+  deleteSale
 };

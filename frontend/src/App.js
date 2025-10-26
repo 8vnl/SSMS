@@ -10,15 +10,19 @@ import './styles/App.css';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    const guestMode = localStorage.getItem('isGuest');
     
     if (token && userData) {
       setUser(JSON.parse(userData));
+    } else if (guestMode === 'true') {
+      setIsGuest(true);
     }
     setLoading(false);
   }, []);
@@ -26,13 +30,25 @@ function App() {
   const login = (userData, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.removeItem('isGuest');
     setUser(userData);
+    setIsGuest(false);
+  };
+
+  const loginAsGuest = () => {
+    localStorage.setItem('isGuest', 'true');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsGuest(true);
+    setUser(null);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('isGuest');
     setUser(null);
+    setIsGuest(false);
     setSidebarOpen(false);
   };
 
@@ -55,7 +71,7 @@ function App() {
               <span className="tagline">Sales Management</span>
             </div>
             
-            {user && (
+            {(user || isGuest) && (
               <>
                 <button 
                   className="menu-toggle"
@@ -68,19 +84,23 @@ function App() {
                   <a href="/dashboard" onClick={() => setSidebarOpen(false)}>
                     📊 Dashboard
                   </a>
-                  <a href="/sales" onClick={() => setSidebarOpen(false)}>
-                    ➕ New Sale
-                  </a>
                   <a href="/reports" onClick={() => setSidebarOpen(false)}>
                     📈 Reports
                   </a>
-                  {user.role === 'admin' && (
-                    <a href="/admin" onClick={() => setSidebarOpen(false)}>
-                      ⚙️ Admin
-                    </a>
+                  {user && (
+                    <>
+                      <a href="/sales" onClick={() => setSidebarOpen(false)}>
+                        ➕ New Sale
+                      </a>
+                      {user.role === 'admin' && (
+                        <a href="/admin" onClick={() => setSidebarOpen(false)}>
+                          ⚙️ Admin
+                        </a>
+                      )}
+                    </>
                   )}
                   <button onClick={logout} className="logout-btn">
-                    🚪 Logout
+                    🚪 {isGuest ? 'Exit Guest Mode' : 'Logout'}
                   </button>
                 </nav>
               </>
@@ -92,19 +112,19 @@ function App() {
           <Routes>
             <Route 
               path="/" 
-              element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+              element={(user || isGuest) ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/login" 
-              element={user ? <Navigate to="/dashboard" /> : <Login onLogin={login} />} 
+              element={(user || isGuest) ? <Navigate to="/dashboard" /> : <Login onLogin={login} onGuestLogin={loginAsGuest} />} 
             />
             <Route 
               path="/register" 
-              element={user ? <Navigate to="/dashboard" /> : <Register />} 
+              element={(user || isGuest) ? <Navigate to="/dashboard" /> : <Register />} 
             />
             <Route 
               path="/dashboard" 
-              element={user ? <Dashboard /> : <Navigate to="/login" />} 
+              element={(user || isGuest) ? <Dashboard isGuest={isGuest} /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/sales" 
@@ -112,7 +132,7 @@ function App() {
             />
             <Route 
               path="/reports" 
-              element={user ? <SalesReport /> : <Navigate to="/login" />} 
+              element={(user || isGuest) ? <SalesReport /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/admin" 

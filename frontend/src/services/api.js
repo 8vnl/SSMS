@@ -8,6 +8,12 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
+// Public API instance for guest mode
+export const publicApi = axios.create({
+  baseURL: API_BASE_URL + '/public',
+  timeout: 10000,
+});
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -18,21 +24,28 @@ api.interceptors.request.use((config) => {
 });
 
 // Add response interceptor for better error handling
+const errorHandler = (error) => {
+  console.error('API Error:', error);
+  if (error.code === 'ECONNREFUSED') {
+    error.message = 'Cannot connect to server. Please check your connection.';
+  } else if (error.response?.status === 401) {
+    error.message = 'Invalid credentials';
+  } else if (error.response?.status === 400) {
+    error.message = error.response.data?.message || 'Bad request';
+  } else if (!error.response) {
+    error.message = 'Network error - cannot reach server';
+  }
+  return Promise.reject(error);
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error('API Error:', error);
-    if (error.code === 'ECONNREFUSED') {
-      error.message = 'Cannot connect to server. Please check your connection.';
-    } else if (error.response?.status === 401) {
-      error.message = 'Invalid credentials';
-    } else if (error.response?.status === 400) {
-      error.message = error.response.data?.message || 'Bad request';
-    } else if (!error.response) {
-      error.message = 'Network error - cannot reach server';
-    }
-    return Promise.reject(error);
-  }
+  errorHandler
+);
+
+publicApi.interceptors.response.use(
+  (response) => response,
+  errorHandler
 );
 
 export default api;

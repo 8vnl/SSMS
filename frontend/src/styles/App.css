@@ -39,7 +39,7 @@ body {
   box-shadow: var(--shadow);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000; /* Increased for mobile */
 }
 
 .header-content {
@@ -112,7 +112,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-x: hidden;
 }
 
 /* Loading Screen */
@@ -377,22 +377,112 @@ body {
   font-size: 0.8rem;
 }
 
-/* Order Items */
-.order-item {
+/* Field Group Styles */
+.field-group {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
 }
 
-.order-item select,
-.order-item input {
+.field-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0;
+}
+
+.field-group select,
+.field-group input {
+  width: 100%;
+}
+
+/* Enhanced Order Item Card Styles */
+.order-item-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+}
+
+.order-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-item-header h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.order-item-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.quantity-input {
+  width: 80px !important;
+  flex: none !important;
+}
+
+.charges-input {
+  width: 120px !important;
+  flex: none !important;
+}
+
+.notes-input {
   flex: 1;
-  min-width: 120px;
+}
+
+.item-price-summary {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+.price-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.price-breakdown span {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.1rem 0;
+}
+
+.item-total {
+  font-weight: 700;
+  color: var(--primary);
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem !important;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.item-notes {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  margin-top: 0.5rem;
 }
 
 .remove-item {
@@ -407,6 +497,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 0.8rem;
 }
 
 /* Alert Messages */
@@ -452,7 +543,7 @@ body {
     padding: 2rem 1rem;
     transition: right 0.3s ease;
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
+    z-index: 1002; /* Higher than overlay */
   }
 
   .main-nav.nav-open {
@@ -485,7 +576,7 @@ body {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
+    z-index: 1001; /* Lower than sidebar but higher than main content */
   }
 
   .main-content {
@@ -510,16 +601,6 @@ body {
     font-size: 1.75rem;
   }
 
-  .order-item {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .order-item select,
-  .order-item input {
-    min-width: auto;
-  }
-
   /* Mobile table styles */
   .desktop-table {
     display: none;
@@ -527,6 +608,26 @@ body {
 
   .mobile-table {
     display: block;
+  }
+
+  /* Mobile order item styles */
+  .field-row {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .quantity-input,
+  .charges-input {
+    width: 100% !important;
+  }
+
+  .field-group label {
+    font-size: 0.75rem;
+  }
+
+  .price-breakdown {
+    font-size: 0.8rem;
   }
 
   table {
@@ -565,6 +666,18 @@ body {
     flex-basis: 100%;
     margin: 0.25rem 0;
   }
+
+  .order-item-card {
+    padding: 0.75rem;
+  }
+
+  .order-item-header h4 {
+    font-size: 0.9rem;
+  }
+
+  .price-breakdown span {
+    font-size: 0.75rem;
+  }
 }
 
 /* Utility Classes */
@@ -583,4 +696,15 @@ body {
 .currency {
   font-family: 'Courier New', monospace;
   font-weight: 600;
+}
+
+/* Prevent Bitdefender from interfering with specific elements */
+.overlay {
+  pointer-events: auto !important;
+}
+
+/* Or more specifically */
+[bis_skin_checked] {
+  /* Ensure it doesn't break functionality */
+  pointer-events: none !important;
 }

@@ -13,8 +13,25 @@ storage.initialize().then(() => {
   console.error('Failed to initialize data storage:', err);
 });
 
-app.use(cors());
+// Update CORS to allow all origins
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
 app.use(express.json());
+
+// Add error handling for malformed JSON
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    console.error('JSON Parse Error:', error.message);
+    return res.status(400).json({ 
+      message: 'Invalid JSON in request body',
+      details: error.message 
+    });
+  }
+  next();
+});
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../frontend/build')));
@@ -27,15 +44,19 @@ app.use('/api/menu', require('./routes/menu'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ message: 'SSMS API is running', timestamp: new Date().toISOString() });
+  res.json({ 
+    message: 'SSMS API is running', 
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Catch all handler - send back React's index.html file
+// Catch all handler
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Local: http://localhost:${PORT}`);
+  console.log(`External: http://35.240.205.230:${PORT}`);
 });

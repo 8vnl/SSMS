@@ -15,6 +15,7 @@ const Login = ({ onLogin }) => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError(''); // Clear error when user starts typing
   };
 
   const handleSubmit = async (e) => {
@@ -22,12 +23,28 @@ const Login = ({ onLogin }) => {
     setLoading(true);
     setError('');
 
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      setError('Please enter both email and password');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await api.post('/auth/login', formData);
+      console.log('Attempting login...');
+      const response = await api.post('/auth/login', {
+        email: formData.email.trim(),
+        password: formData.password
+      });
+      
+      console.log('Login successful:', response.data);
       const { token, user } = response.data;
       onLogin(user, token);
+      
     } catch (error) {
-      setError(error.response?.data?.message || 'Login failed');
+      console.error('Login failed:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please check your connection.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -36,7 +53,11 @@ const Login = ({ onLogin }) => {
   return (
     <div className="form-container">
       <h2>Login to SSMS</h2>
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="alert alert-error">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
       
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -47,6 +68,8 @@ const Login = ({ onLogin }) => {
             value={formData.email}
             onChange={handleChange}
             required
+            disabled={loading}
+            placeholder="admin@ssms.com"
           />
         </div>
 
@@ -58,10 +81,17 @@ const Login = ({ onLogin }) => {
             value={formData.password}
             onChange={handleChange}
             required
+            disabled={loading}
+            placeholder="Enter your password"
           />
         </div>
 
-        <button type="submit" className="btn" disabled={loading}>
+        <button 
+          type="submit" 
+          className="btn" 
+          disabled={loading}
+          style={{ width: '100%' }}
+        >
           {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>
@@ -69,6 +99,12 @@ const Login = ({ onLogin }) => {
       <p style={{ marginTop: '1rem', textAlign: 'center' }}>
         Don't have an account? <Link to="/register">Register here</Link>
       </p>
+
+      <div style={{ marginTop: '2rem', fontSize: '0.9rem', color: '#666' }}>
+        <p><strong>Test Credentials:</strong></p>
+        <p>Email: admin@ssms.com</p>
+        <p>Password: admin123</p>
+      </div>
     </div>
   );
 };

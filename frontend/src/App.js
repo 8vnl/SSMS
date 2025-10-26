@@ -11,6 +11,7 @@ import './styles/App.css';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -32,29 +33,62 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setSidebarOpen(false);
   };
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Loading StallFlow...</p>
+      </div>
+    );
   }
 
   return (
     <Router>
       <div className="App">
         <header className="app-header">
-          <h1>Stall Sales Management System</h1>
-          {user && (
-            <nav className="main-nav">
-              <a href="/dashboard">Dashboard</a>
-              <a href="/sales">New Sale</a>
-              <a href="/reports">Reports</a>
-              {user.role === 'admin' && <a href="/admin">Admin</a>}
-              <button onClick={logout} className="logout-btn">Logout</button>
-            </nav>
-          )}
+          <div className="header-content">
+            <div className="brand">
+              <h1>StallFlow</h1>
+              <span className="tagline">Sales Management</span>
+            </div>
+            
+            {user && (
+              <>
+                <button 
+                  className="menu-toggle"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                  ☰
+                </button>
+                
+                <nav className={`main-nav ${sidebarOpen ? 'nav-open' : ''}`}>
+                  <a href="/dashboard" onClick={() => setSidebarOpen(false)}>
+                    📊 Dashboard
+                  </a>
+                  <a href="/sales" onClick={() => setSidebarOpen(false)}>
+                    ➕ New Sale
+                  </a>
+                  <a href="/reports" onClick={() => setSidebarOpen(false)}>
+                    📈 Reports
+                  </a>
+                  {user.role === 'admin' && (
+                    <a href="/admin" onClick={() => setSidebarOpen(false)}>
+                      ⚙️ Admin
+                    </a>
+                  )}
+                  <button onClick={logout} className="logout-btn">
+                    🚪 Logout
+                  </button>
+                </nav>
+              </>
+            )}
+          </div>
         </header>
 
-        <main className="main-content">
+        <div className={`main-content ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <Routes>
             <Route 
               path="/" 
@@ -85,7 +119,14 @@ function App() {
               element={user && user.role === 'admin' ? <AdminPanel /> : <Navigate to="/dashboard" />} 
             />
           </Routes>
-        </main>
+        </div>
+
+        {sidebarOpen && (
+          <div 
+            className="overlay"
+            onClick={() => setSidebarOpen(false)}
+          ></div>
+        )}
       </div>
     </Router>
   );

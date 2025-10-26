@@ -120,7 +120,7 @@ const SalesForm = () => {
       };
       
       await api.post('/sales', submissionData);
-      setMessage('Sale recorded successfully!');
+      setMessage('✅ Sale recorded successfully!');
       setFormData({
         buyerIdentifier: '',
         orderItems: [{ menuItem: '', quantity: 1, selectedOption: '' }],
@@ -133,7 +133,7 @@ const SalesForm = () => {
         navigate('/dashboard');
       }, 2000);
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to record sale');
+      setError('❌ ' + (error.response?.data?.message || 'Failed to record sale'));
     } finally {
       setLoading(false);
     }
@@ -148,14 +148,14 @@ const SalesForm = () => {
 
   return (
     <div className="form-container">
-      <h2>Record New Sale</h2>
+      <h2>➕ New Sale</h2>
       
       {message && <div className="alert alert-success">{message}</div>}
       {error && <div className="alert alert-error">{error}</div>}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Buyer/Table Identifier *</label>
+          <label>Customer/Table *</label>
           <input
             type="text"
             name="buyerIdentifier"
@@ -189,7 +189,7 @@ const SalesForm = () => {
                 value={item.quantity}
                 onChange={(e) => handleOrderItemChange(index, 'quantity', parseInt(e.target.value))}
                 placeholder="Qty"
-                style={{ width: '80px' }}
+                style={{ minWidth: '80px' }}
               />
 
               {item.menuItem && (
@@ -211,20 +211,21 @@ const SalesForm = () => {
                   type="button"
                   className="remove-item"
                   onClick={() => removeOrderItem(index)}
+                  title="Remove item"
                 >
-                  ×
+                  ✕
                 </button>
               )}
             </div>
           ))}
           
           <button type="button" className="btn" onClick={addOrderItem}>
-            Add Another Item
+            ➕ Add Another Item
           </button>
         </div>
 
         <div className="form-group">
-          <label>Custom Additional Charges</label>
+          <label>Additional Charges</label>
           <input
             type="number"
             name="customAdditionalCharges"
@@ -232,11 +233,12 @@ const SalesForm = () => {
             onChange={handleInputChange}
             min="0"
             step="1000"
+            placeholder="0"
           />
         </div>
 
         <div className="form-group">
-          <label>Additional Charge Notes</label>
+          <label>Charge Notes</label>
           <input
             type="text"
             name="additionalChargeNotes"
@@ -253,16 +255,39 @@ const SalesForm = () => {
             value={formData.generalNotes}
             onChange={handleInputChange}
             placeholder="Any special instructions or notes..."
+            rows="3"
           />
         </div>
 
-        <div className="form-group">
-          <h3>Total Price: {formatCurrency(totalPrice)}</h3>
+        <div className="form-group text-center" style={{ 
+          background: '#f8fafc', 
+          padding: '1rem', 
+          borderRadius: '8px',
+          border: '2px solid #e2e8f0'
+        }}>
+          <h3 style={{ margin: 0, color: '#1e293b' }}>
+            Total: <span className="currency">{formatCurrency(totalPrice)}</span>
+          </h3>
         </div>
 
-        <button type="submit" className="btn btn-success" disabled={loading}>
-          {loading ? 'Recording Sale...' : 'Record Sale'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button 
+            type="submit" 
+            className="btn btn-success" 
+            disabled={loading}
+            style={{ flex: 1 }}
+          >
+            {loading ? '💾 Saving...' : '💾 Save Sale'}
+          </button>
+          <button 
+            type="button" 
+            className="btn" 
+            onClick={() => navigate('/dashboard')}
+            style={{ flex: 1 }}
+          >
+            ↩️ Cancel
+          </button>
+        </div>
       </form>
     </div>
   );
